@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@babel/polyfill": "^7.0.0",
+    "eth-crypto": "^1.2.4",
     "eth-key-value-contracts": "file:../smart-contracts",
     "web3": "^1.0.0-beta.36"
   }
