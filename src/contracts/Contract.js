@@ -1,3 +1,5 @@
+import { hex } from '../encoder'
+
 export default class Contract {
   constructor(contract, sender) {
     this.contract = contract
@@ -22,6 +24,11 @@ export default class Contract {
     return this.contract.methods
       [name](...args)
       .send({ from: this.sender, gas: 1000000 })
+  }
+
+  async _wrapBytes(resultPromise) {
+    const data = await resultPromise
+    return data ? hex.encode(data) : data
   }
 
   static async _getDefaultAccount() {

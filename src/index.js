@@ -9,13 +9,20 @@ const IDENTITY = {
   publicKey: 'bacb473a3fd348e263cb5d23900cdc98711b6ddf3c70d089728835e4023ffae8da00abd825593410e1b5d627e3ddd3195f864892f7546df39a27a57b44dd836e'
 }
 
+window.id = IDENTITY
+window.EthCrypto = EthCrypto
+window.Symmetric = Symmetric
+
 const init = async () => {
   const { web3 } = await getWeb3()
   const provider = setProvider(web3, { development: true })
-  window.id = IDENTITY
   window.store = await KeyValueStore.build()
-  window.EthCrypto = EthCrypto
-  window.Symmetric = Symmetric
+  await store.setPublicKey(id.publicKey)
+  try {
+    await store.create('hello', 'hi')
+  } catch (e) {
+    console.log('hello already created')
+  }
   console.log('ready')
 }
 

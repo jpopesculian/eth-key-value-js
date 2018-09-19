@@ -1,7 +1,7 @@
 import KeyValueStoreContract from './contracts/KeyValueStoreContract'
-import { encode, decode } from './accessor'
+import { ascii, hex, text } from './encoder'
 import Symmetric from './crypto/Symmetric'
-import EthCrypto from 'eth-crypto'
+import EthCrypto, { cipher } from 'eth-crypto'
 
 export default class KeyValueStore {
   constructor(contract) {
@@ -15,9 +15,58 @@ export default class KeyValueStore {
     return this.setPublicKey(publicKey)
   }
 
-  async create(key, data, account) {
+  async create(accessor, data, account) {
+    if (this.exists(accessor)) {
+      // throw Error('Already created')
+    }
     account = account || this.sender
+    const publicKey = await this.getPublicKey(account)
     const symmetric = await Symmetric.build()
+    const encryptedData = await symmetric.encryptString(data)
+    const encryptedKey = hex.encode(
+      cipher.stringify(
+        await EthCrypto.encryptWithPublicKey(
+          publicKey,
+          text.decode(await symmetric.export())
+        )
+      )
+    )
+    return this.contract.create(
+      account,
+      ascii.encode(accessor),
+      encryptedData,
+      encryptedKey
+    )
+  }
+
+  async write(accessor, data, privateKey) {
+    const symmetric = await this.getSymmetricKey(accessor, privateKey)
+    const encryptedData = await symmetric.encryptString(data)
+    return this.contract.write(ascii.encode(accessor), encryptedData)
+  }
+
+  async read(accessor, privateKey) {
+    const data = await this.contract.getData(ascii.encode(accessor))
+    if (!data) {
+      throw Error('No data')
+    }
+    const symmetric = await this.getSymmetricKey(accessor, privateKey)
+    return symmetric.decryptString(data)
+  }
+
+  async getSymmetricKey(accessor, privateKey, account) {
+    account = account || this.sender
+    const exportedKey = text.encode(
+      await EthCrypto.decryptWithPrivateKey(
+        privateKey,
+        cipher.parse(
+          hex.decode(
+            await this.contract.getKey(ascii.encode(accessor), account)
+          )
+        )
+      )
+    )
+    return Symmetric.build(exportedKey)
   }
 
   async isRegistered(account) {
@@ -25,7 +74,7 @@ export default class KeyValueStore {
   }
 
   async exists(accessor) {
-    return this.contract.exists(encode(accessor))
+    return this.contract.created(ascii.encode(accessor))
   }
 
   async setPublicKey(publicKey) {
