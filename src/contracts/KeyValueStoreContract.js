@@ -13,6 +13,38 @@ export default class KeyValueStoreContract extends Contract {
     return this._call('created', accessor)
   }
 
+  async addOwner(accessor, account, encryptedKey) {
+    return this._send('addOwner', accessor, account, encryptedKey)
+  }
+
+  async addAdmin(accessor, account, encryptedKey) {
+    return this._send('addAdmin', accessor, account, encryptedKey)
+  }
+
+  async grantWriteAccess(accessor, account, encryptedKey) {
+    return this._send('grantWriteAccess', accessor, account, encryptedKey)
+  }
+
+  async grantReadAccess(accessor, account, encryptedKey) {
+    return this._send('grantReadAccess', accessor, account, encryptedKey)
+  }
+
+  async removeOwner(accessor, account) {
+    return this._send('removeOwner', accessor, account)
+  }
+
+  async removeAdmin(accessor, account) {
+    return this._send('removeAdmin', accessor, account)
+  }
+
+  async revokeWriteAccess(accessor, account) {
+    return this._send('revokeWriteAccess', accessor, account)
+  }
+
+  async revokeReadAccess(accessor, account) {
+    return this._send('revokeReadAccess', accessor, account)
+  }
+
   async setRegistration(publicKey) {
     return this._send('setRegistration', publicKey)
   }
@@ -31,6 +63,26 @@ export default class KeyValueStoreContract extends Contract {
 
   async getKey(accessor, account) {
     return this._wrapBytes(this._call('getKey', accessor, account))
+  }
+
+  async getMembers(accessor) {
+    return this._call('getMembers', accessor)
+  }
+
+  async isOwner(accessor, account) {
+    return this._call('isOwner', accessor, account)
+  }
+
+  async isAdmin(accessor, account) {
+    return this._call('isAdmin', accessor, account)
+  }
+
+  async canWrite(accessor, account) {
+    return this._call('canWrite', accessor, account)
+  }
+
+  async canRead(accessor, account) {
+    return this._call('canRead', accessor, account)
   }
 
   static async _getContractDescription() {
