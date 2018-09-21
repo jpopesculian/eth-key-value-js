@@ -41,8 +41,14 @@ export default class KeyValueStoreContract extends Contract {
     return this._send('revokeWriteAccess', accessor, account)
   }
 
-  async revokeReadAccess(accessor, account) {
-    return this._send('revokeReadAccess', accessor, account)
+  async revokeReadAccess(accessor, account, encryptedData, encryptedKey) {
+    return this._send(
+      'revokeReadAccess',
+      accessor,
+      account,
+      encryptedData,
+      encryptedKey
+    )
   }
 
   async setRegistration(publicKey) {
@@ -63,6 +69,10 @@ export default class KeyValueStoreContract extends Contract {
 
   async getKey(accessor, account) {
     return this._wrapBytes(this._call('getKey', accessor, account))
+  }
+
+  async issueEncryptedKey(accessor, account, encryptedKey) {
+    return this._send('issueEncryptedKey', accessor, account, encryptedKey)
   }
 
   async getMembers(accessor) {

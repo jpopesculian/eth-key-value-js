@@ -2,7 +2,7 @@ import KeyValueStoreContract from './contracts/KeyValueStoreContract'
 import { ascii, hex, text } from './encoder'
 import Symmetric from './crypto/Symmetric'
 import EthCrypto, { cipher } from 'eth-crypto'
-import { zipObject, keys, map, each, filter, identity } from 'lodash'
+import { set, reject, keys, map, each, filter, identity } from 'lodash'
 
 export const PERMISSIONS = {
   OWNER: Symbol('owner'),
@@ -32,9 +32,8 @@ export default class KeyValueStore {
   }
 
   async create(accessor, data, account) {
-    if (this.exists(accessor)) {
-      // throw Error('Already created')
-      console.warn('Already created')
+    if (await this.exists(accessor)) {
+      throw Error('Already created')
     }
     account = account || this.sender
     const symmetric = await Symmetric.build()
@@ -53,7 +52,7 @@ export default class KeyValueStore {
 
   async write(accessor, data, privateKey) {
     if (!await this.canWrite(accessor)) {
-      throw Error('Account not permitted to write')
+      throw Error('Not permitted to write')
     }
     privateKey = privateKey || this.privateKey
     const symmetric = await this.getSymmetricKey(accessor, privateKey)
@@ -63,7 +62,7 @@ export default class KeyValueStore {
 
   async read(accessor, privateKey) {
     if (!await this.canRead(accessor)) {
-      throw Error('Account not permitted to read')
+      throw Error('Not permitted to read')
     }
     privateKey = privateKey || this.privateKey
     const data = await this.contract.getData(ascii.encode(accessor))
@@ -76,7 +75,7 @@ export default class KeyValueStore {
 
   async addOwner(accessor, account, privateKey) {
     if (!await this.isOwner(accessor)) {
-      throw Error('Account not permitted to add owners')
+      throw Error('Not permitted to add owners')
     }
     privateKey = privateKey || this.privateKey
     return this.contract.addOwner(
@@ -88,7 +87,7 @@ export default class KeyValueStore {
 
   async addAdmin(accessor, account, privateKey) {
     if (!await this.isOwner(accessor)) {
-      throw Error('Account not permitted to add admins')
+      throw Error('Not permitted to add admins')
     }
     privateKey = privateKey || this.privateKey
     return this.contract.addAdmin(
@@ -100,7 +99,7 @@ export default class KeyValueStore {
 
   async grantReadAccess(accessor, account, privateKey) {
     if (!await this.isAdmin(accessor)) {
-      throw Error('Account not permitted to grant read permissions')
+      throw Error('Not permitted to grant read permissions')
     }
     privateKey = privateKey || this.privateKey
     return this.contract.grantReadAccess(
@@ -112,7 +111,7 @@ export default class KeyValueStore {
 
   async grantWriteAccess(accessor, account, privateKey) {
     if (!await this.isAdmin(accessor)) {
-      throw Error('Account not permitted to grant write permissions')
+      throw Error('Not permitted to grant write permissions')
     }
     privateKey = privateKey || this.privateKey
     return this.contract.grantWriteAccess(
@@ -126,8 +125,11 @@ export default class KeyValueStore {
     if (this.isSender(account)) {
       throw Error('Cannot remove own permissions')
     }
+    if (!await this.isAdmin(accessor, account)) {
+      throw Error('Account is not an admin')
+    }
     if (!await this.isOwner(accessor)) {
-      throw Error('Account not permitted to remove admins')
+      throw Error('Not permitted to remove admins')
     }
     return this.contract.removeAdmin(ascii.encode(accessor), account)
   }
@@ -136,8 +138,11 @@ export default class KeyValueStore {
     if (this.isSender(account)) {
       throw Error('Cannot remove own permissions')
     }
+    if (!await this.isOwner(accessor, account)) {
+      throw Error('Account is not an owner')
+    }
     if (!await this.isOwner(accessor)) {
-      throw Error('Account not permitted to remove owners')
+      throw Error('Not permitted to remove owners')
     }
     return this.contract.removeOwner(ascii.encode(accessor), account)
   }
@@ -146,38 +151,76 @@ export default class KeyValueStore {
     if (this.isSender(account)) {
       throw Error('Cannot remove own permissions')
     }
+    if (!await this.canWrite(accessor, account)) {
+      throw Error('Account does not have write permissions')
+    }
     if (!await this.isAdmin(accessor)) {
-      throw Error('Account not permitted to revoke write permissions')
+      throw Error('Not permitted to revoke write permissions')
+    }
+    if (
+      (await this.isAdmin(accessor, account)) ||
+      (await this.isOwner(accessor, account))
+    ) {
+      if (!await this.isOwner(accessor)) {
+        throw Error(
+          'Not permitted to revoke write permissions for this account'
+        )
+      }
     }
     return this.contract.revokeWriteAccess(ascii.encode(accessor), account)
   }
 
-  async revokeReadAccess(accessor, account) {
+  async revokeReadAccess(accessor, account, privateKey) {
     if (this.isSender(account)) {
       throw Error('Cannot remove own permissions')
     }
-    if (!await this.isAdmin(accessor)) {
-      throw Error('Account not permitted to revoke read permissions')
+    if (!await this.canRead(accessor, account)) {
+      throw Error('Account does not have read permissions')
     }
-    return this.contract.revokeReadAccess(ascii.encode(accessor), account)
+    if (!await this.isAdmin(accessor)) {
+      throw Error('Not permitted to revoke read permissions')
+    }
+    if (
+      (await this.isAdmin(accessor, account)) ||
+      (await this.isOwner(accessor, account))
+    ) {
+      if (!await this.isOwner(accessor)) {
+        throw Error('Not permitted to revoke read permissions for this account')
+      }
+    }
+    privateKey = privateKey || this.privateKey
+    const symmetric = await Symmetric.build()
+    const encryptedData = await symmetric.encryptString(
+      await this.read(accessor, privateKey)
+    )
+    const encryptedKey = await KeyValueStore._encryptSymmetric(
+      symmetric,
+      await this.getPublicKey()
+    )
+    return this.contract.revokeReadAccess(
+      ascii.encode(accessor),
+      account,
+      encryptedData,
+      encryptedKey
+    )
   }
 
   async getMembers(accessor, options = {}) {
     const { permissions } = options
-    const accounts = await this.contract.getMembers(ascii.encode(accessor))
-    const members = zipObject(
-      accounts,
-      map(() => ({}), new Array(accounts.length))
+    let members = map(
+      account => ({ account }),
+      await this.contract.getMembers(ascii.encode(accessor))
     )
     if (permissions) {
-      each(
-        ([account, permission]) => {
-          members[account].permissions = permission
-        },
-        await Promise.all(
-          map(async account => {
-            return [account, await this.getPermissions(accessor, account)]
-          }, keys(members))
+      members = await Promise.all(
+        map(
+          async member =>
+            set(
+              'permissions',
+              await this.getPermissions(accessor, member.account),
+              member
+            ),
+          members
         )
       )
     }
@@ -220,17 +263,38 @@ export default class KeyValueStore {
   async getSymmetricKey(accessor, privateKey, account) {
     privateKey = privateKey || this.privateKey
     account = account || this.sender
-    const exportedKey = text.encode(
-      await EthCrypto.decryptWithPrivateKey(
-        privateKey,
-        cipher.parse(
-          hex.decode(
-            await this.contract.getKey(ascii.encode(accessor), account)
-          )
-        )
+    return KeyValueStore._decryptSymmetric(
+      await this.contract.getKey(ascii.encode(accessor), account),
+      privateKey
+    )
+  }
+
+  async issueAllEncryptedKeys(accessor, privateKey) {
+    privateKey = privateKey || this.privateKey
+    const accounts = map(
+      'account',
+      reject({ account: this.sender }, await this.getMembers(accessor))
+    )
+    return Promise.all(
+      map(
+        account => this.issueEncryptedKey(accessor, account, privateKey),
+        accounts
       )
     )
-    return Symmetric.build(exportedKey)
+  }
+
+  async issueEncryptedKey(accessor, account, privateKey) {
+    if (!await this.isAdmin(accessor, this.sender)) {
+      throw Error('Not permitted to issue new keys')
+    }
+    if (!await this.canRead(accessor, account)) {
+      throw Error('Account needs read permissions to get a key')
+    }
+    return this.contract.issueEncryptedKey(
+      ascii.encode(accessor),
+      account,
+      await this.newEncryptedKey(accessor, account, privateKey)
+    )
   }
 
   async newEncryptedKey(accessor, account, privateKey) {
@@ -257,7 +321,7 @@ export default class KeyValueStore {
   async getPublicKey(account) {
     account = account || this.sender
     if (!await this.isRegistered(account)) {
-      throw Error('Account not registered')
+      throw Error('Not registered')
     }
     return this.contract.getRegistration(account)
   }
@@ -266,7 +330,7 @@ export default class KeyValueStore {
     return this.contract.setRegistration(publicKey)
   }
 
-  async isSender(account) {
+  isSender(account) {
     return this.sender == account
   }
 
@@ -279,6 +343,16 @@ export default class KeyValueStore {
         )
       )
     )
+  }
+
+  static async _decryptSymmetric(encryptedKey, privateKey) {
+    const exportedKey = text.encode(
+      await EthCrypto.decryptWithPrivateKey(
+        privateKey,
+        cipher.parse(hex.decode(encryptedKey))
+      )
+    )
+    return Symmetric.build(exportedKey)
   }
 
   get sender() {
