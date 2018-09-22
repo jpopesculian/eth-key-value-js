@@ -9,6 +9,14 @@ export default class KeyValueStoreContract extends Contract {
     return this._send('write', accessor, encryptedData)
   }
 
+  async getData(accessor) {
+    return this._wrapBytes(this._call('data', accessor))
+  }
+
+  async remove(acessor) {
+    return this._send('remove', accessor)
+  }
+
   async created(accessor) {
     return this._call('created', accessor)
   }
@@ -51,6 +59,10 @@ export default class KeyValueStoreContract extends Contract {
     )
   }
 
+  async unRegister() {
+    return this._send('unRegister')
+  }
+
   async setRegistration(publicKey) {
     return this._send('setRegistration', publicKey)
   }
@@ -61,10 +73,6 @@ export default class KeyValueStoreContract extends Contract {
 
   async isRegistered(account) {
     return this._call('registered', account)
-  }
-
-  async getData(accessor) {
-    return this._wrapBytes(this._call('data', accessor))
   }
 
   async getKey(accessor, account) {

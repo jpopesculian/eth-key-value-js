@@ -2,7 +2,8 @@ import getWeb3, { setProvider } from './web3'
 import Symmetric from './crypto/Symmetric'
 import EthCrypto from 'eth-crypto'
 import KeyValueStore from './KeyValueStore'
-import { ascii } from './encoder'
+import { ascii, json, text } from './encoder'
+import msgpack from 'msgpack-lite'
 import _ from 'lodash/fp'
 
 const IDENTITY_1 = {
@@ -28,6 +29,9 @@ window.EthCrypto = EthCrypto
 window.Symmetric = Symmetric
 window.KeyValueStore = KeyValueStore
 window.ascii = ascii
+window.json = json
+window.text = text
+window.msgpack = msgpack
 window._ = _
 
 const init = async () => {

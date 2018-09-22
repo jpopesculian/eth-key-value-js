@@ -1,9 +1,29 @@
+import msgpack from 'msgpack-lite'
+
 const isAscii = str => /^[\x01-\xFF]+$/.test(str)
 const isHex = str => /^(0x)?[0-9A-Fa-f]+$/.test(str)
 
 export const text = {
-  encode: text => new Uint8Array(Array.from(text).map(c => c.charCodeAt(0))),
+  encode: text => {
+    let result = []
+    for (let i = 0; i < text.length; i++) {
+      const stack = []
+      let char = text.charCodeAt(i)
+      do {
+        stack.push(char & 0xff)
+        char = char >> 8
+      } while (char)
+      result = result.concat(stack.reverse())
+    }
+    return new Uint8Array(result)
+  },
   decode: encodedText => String.fromCharCode(...encodedText)
+}
+
+export const json = {
+  encode: object => text.decode(msgpack.encode(object)),
+  decode: encodedObject => msgpack.decode(text.encode(encodedObject)),
+  test: object => json.decode(json.encode(object))
 }
 
 export const ascii = {
