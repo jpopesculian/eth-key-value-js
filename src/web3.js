@@ -22,7 +22,7 @@ const polyfillHttpProvider = (...libraries) => {
 }
 
 const validWeb3 = web3 => {
-  if (!web3 || !web3.version) {
+  if (!web3 || !(web3.version && typeof web3.version === 'string')) {
     return false
   }
   return web3.version.match(/^1.0.*/) !== null

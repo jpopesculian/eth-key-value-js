@@ -38,6 +38,9 @@ const init = async () => {
   const { web3 } = await getWeb3()
   const provider = setProvider(web3, { development: true })
   const accounts = await web3.eth.getAccounts()
+  window.id1.account = accounts[0]
+  window.id2.account = accounts[1]
+  window.id3.account = accounts[3]
   window.store1 = await KeyValueStore.build(null, accounts[0], id1.privateKey)
   window.store2 = await KeyValueStore.build(null, accounts[1], id2.privateKey)
   window.store3 = await KeyValueStore.build(null, accounts[2], id3.privateKey)
