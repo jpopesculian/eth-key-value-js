@@ -42,6 +42,7 @@ export default class KeyValueStore {
     if (await this.exists(accessor)) {
       throw Error('Already created')
     }
+    data = data || ''
     account = account || this.sender
     const symmetric = await Symmetric.build()
     const encryptedData = await symmetric.encryptString(data)
