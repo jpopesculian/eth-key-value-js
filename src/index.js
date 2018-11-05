@@ -1,8 +1,8 @@
-import getWeb3, { setProvider } from './web3'
+import getWeb3, { setProvider } from './utils/web3'
 import Symmetric from './crypto/Symmetric'
 import EthCrypto from 'eth-crypto'
 import KeyValueStore from './KeyValueStore'
-import { ascii, json, text } from './encoder'
+import { ascii, json, text } from './utils/encoder'
 import msgpack from 'msgpack-lite'
 import _ from 'lodash/fp'
 
@@ -45,7 +45,7 @@ const init = async () => {
   window.store2 = await KeyValueStore.build(null, accounts[1], id2.privateKey)
   window.store3 = await KeyValueStore.build(null, accounts[2], id3.privateKey)
 
-  const k = 'hello'
+  const k = 'howdy'
   const v = 'hi'
 
   await store1.setPublicKey(id1.publicKey)
@@ -55,7 +55,7 @@ const init = async () => {
   try {
     await store1.create(k, v)
   } catch (e) {
-    console.warn('Already created')
+    console.log(e)
   }
   await store1.write(k, v)
 

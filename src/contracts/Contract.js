@@ -1,4 +1,4 @@
-import { hex } from '../encoder'
+import { hex } from '../utils/encoder'
 
 export default class Contract {
   constructor(contract, sender) {

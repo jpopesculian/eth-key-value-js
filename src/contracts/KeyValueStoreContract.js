@@ -17,24 +17,24 @@ export default class KeyValueStoreContract extends Contract {
     return this._send('remove', accessor)
   }
 
-  async created(accessor) {
-    return this._call('created', accessor)
+  async claimed(accessor) {
+    return this._call('claimed', accessor)
   }
 
-  async addOwner(accessor, account, encryptedKey) {
-    return this._send('addOwner', accessor, account, encryptedKey)
+  async addOwner(accessor, account) {
+    return this._send('addOwner', accessor, account)
   }
 
-  async addAdmin(accessor, account, encryptedKey) {
-    return this._send('addAdmin', accessor, account, encryptedKey)
+  async addAdmin(accessor, account) {
+    return this._send('addAdmin', accessor, account)
   }
 
-  async grantWriteAccess(accessor, account, encryptedKey) {
-    return this._send('grantWriteAccess', accessor, account, encryptedKey)
+  async grantWriteAccess(accessor, account) {
+    return this._send('grantWriteAccess', accessor, account)
   }
 
-  async grantReadAccess(accessor, account, encryptedKey) {
-    return this._send('grantReadAccess', accessor, account, encryptedKey)
+  async grantReadAccess(accessor, account) {
+    return this._send('grantReadAccess', accessor, account)
   }
 
   async removeOwner(accessor, account) {
