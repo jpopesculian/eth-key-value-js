@@ -5,6 +5,10 @@ export default class KeyValueStoreContract extends Contract {
     return this._send('create', account, accessor, encryptedData, encryptedKey)
   }
 
+  async claim(account, accessor) {
+    return this._send('claim', account, accessor)
+  }
+
   async write(accessor, encryptedData) {
     return this._send('write', accessor, encryptedData)
   }

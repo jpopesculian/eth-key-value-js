@@ -5,6 +5,7 @@ import KeyValueStore from './KeyValueStore'
 import { ascii, json, text } from './utils/encoder'
 import msgpack from 'msgpack-lite'
 import _ from 'lodash/fp'
+import { AlreadyError } from './KeyValueStore/errors'
 
 const IDENTITY_1 = {
   address: '0xc85Bd11BA90F629bdEdAc15a406b6801F0a991A4',
@@ -55,7 +56,11 @@ const init = async () => {
   try {
     await store1.create(k, v)
   } catch (e) {
-    console.log(e)
+    if (e instanceof AlreadyError) {
+      console.log(`${k} already created`)
+    } else {
+      console.error(e)
+    }
   }
   await store1.write(k, v)
 
