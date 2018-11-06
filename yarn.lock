@@ -2069,8 +2069,9 @@ eth-ens-namehash@2.0.8:
     idna-uts46-hx "^2.3.1"
     js-sha3 "^0.5.7"
 
-"eth-key-value-contracts@file:../smart-contracts":
+eth-key-value-contracts@^1.0.0:
   version "1.0.0"
+  resolved "https://registry.yarnpkg.com/eth-key-value-contracts/-/eth-key-value-contracts-1.0.0.tgz#6e90131efbd2c3486a0e3573b0b1fd2af88449d0"
 
 eth-lib@0.1.27, eth-lib@^0.1.26:
   version "0.1.27"

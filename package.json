@@ -22,7 +22,7 @@
   "dependencies": {
     "@babel/polyfill": "^7.0.0",
     "eth-crypto": "^1.2.4",
-    "eth-key-value-contracts": "file:../smart-contracts",
+    "eth-key-value-contracts": "^1.0.0",
     "lodash": "^4.17.11",
     "web3": "^1.0.0-beta.36"
   }
