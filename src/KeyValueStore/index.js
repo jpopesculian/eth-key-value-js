@@ -6,6 +6,7 @@ import { NotYetError, AlreadyError, NotAuthorizedError } from './errors'
 import {
   noop,
   set,
+  includes,
   isEqual,
   reject,
   keys,
@@ -13,7 +14,7 @@ import {
   each,
   filter,
   identity
-} from 'lodash'
+} from 'lodash/fp'
 import { asyncNoop } from '../utils/asyncNoop'
 
 export const PERMISSIONS = {
@@ -224,17 +225,15 @@ export default class KeyValueStore {
         this.sender
       )
     }
-    return Promise.all([
-      this.contract.revokeReadAccess(ascii.encode(accessor), account),
-      ...(await this.reEncrypt(
-        accessor,
-        map(
-          'account',
-          this.getMembers(accessor, { except: [account] }),
-          privateKey
-        )
-      ))
-    ])
+    return this.contract.revokeReadAccess(ascii.encode(accessor), account)
+    // return Promise.all([
+    //   this.contract.revokeReadAccess(ascii.encode(accessor), account),
+    //   ...(await this.reEncrypt(
+    //     accessor,
+    //     map('account', this.getMembers(accessor, { except: [account] })),
+    //     privateKey
+    //   ))
+    // ])
   }
 
   async reEncrypt(accessor, accounts, privateKey) {
@@ -243,7 +242,7 @@ export default class KeyValueStore {
     }
     privateKey = privateKey || this.privateKey
     accounts = accounts || map('account', await this.getMembers(accessor))
-    const { symmetric, encrypted } = this._createSymmetricKey()
+    const { symmetric, encrypted } = await this._createSymmetricKey()
 
     let encryptData = asyncNoop()
     try {
@@ -251,7 +250,7 @@ export default class KeyValueStore {
       const encryptedData = await symmetric.encryptString(data)
       encryptData = this.contract.write(ascii.encode(accessor), encryptedData)
     } catch (err) {
-      if (!(err instanceof NotYet)) {
+      if (!(err instanceof NotYetError)) {
         throw err
       }
     }
@@ -326,7 +325,7 @@ export default class KeyValueStore {
   }
 
   async isRegistered(account) {
-    return this.contract.isRegistered(account || this.sender)
+    return await this.contract.getUser(account || this.sender).registered
   }
 
   async claimed(accessor) {
@@ -368,10 +367,11 @@ export default class KeyValueStore {
 
   async getPublicKey(account) {
     account = account || this.sender
-    if (!await this.isRegistered(account)) {
+    const user = await this.contract.getUser(account)
+    if (!user.registered) {
       throw new NotYetError('registered', account)
     }
-    return this.contract.getRegistration(account)
+    return user.publicKey
   }
 
   async setPublicKey(publicKey) {
@@ -381,10 +381,10 @@ export default class KeyValueStore {
   async _getSymmetricKey(accessor, privateKey, account) {
     privateKey = privateKey || this.privateKey
     account = account || this.sender
-    const encryptedKey = await this.contract.getKey(
+    const encryptedKey = (await this.contract.getKey(
       ascii.encode(accessor),
       account
-    )
+    )).value
     const symmetric = await KeyValueStore._decryptSymmetric(
       encryptedKey,
       privateKey

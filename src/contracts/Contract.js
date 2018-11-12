@@ -1,4 +1,5 @@
 import { hex } from '../utils/encoder'
+import { set } from 'lodash/fp'
 
 export default class Contract {
   constructor(contract, sender) {
@@ -26,13 +27,19 @@ export default class Contract {
       .send({ from: this.sender, gas: 1000000 })
   }
 
-  async _wrapBytes(resultPromise) {
+  async _wrapBytes(resultPromise, key = null) {
     const data = await resultPromise
-    return data ? hex.encode(data) : data
+    if (!data) {
+      return data
+    }
+    if (key) {
+      return set(key, hex.encode(data[key]), data)
+    }
+    return hex.encode(data)
   }
 
   static async _getDefaultAccount() {
-    const accounts = await web3.eth.getAccounts()
+    const accounts = await window.web3.eth.getAccounts()
     if (accounts.length < 1) {
       throw Error('No account given')
     }
@@ -40,7 +47,7 @@ export default class Contract {
   }
 
   static async _getDefaultAddress(description) {
-    const networkId = await web3.eth.net.getId()
+    const networkId = await window.web3.eth.net.getId()
     if (description.networks[networkId]) {
       return description.networks[networkId].address
     }
@@ -53,6 +60,8 @@ export default class Contract {
     if (!address) {
       throw Error('No address given!')
     }
-    return new web3.eth.Contract(description.abi, address)
+    return new window.web3.eth.Contract(description.abi, address)
   }
+
+  static async _getContractDescription() {}
 }

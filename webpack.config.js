@@ -17,7 +17,7 @@ module.exports = {
               [
                 'transform-imports',
                 {
-                  lodash: {
+                  'lodash/fp': {
                     transform: 'lodash/fp/${member}',
                     preventFullImport: true
                   }
